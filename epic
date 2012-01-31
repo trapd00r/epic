@@ -1,0 +1,209 @@
+#!/usr/bin/perl
+use strict;
+use warnings FATAL => 'all';
+use vars qw($VERSION);
+
+my $APP  = 'epic';
+$VERSION = '0.012';
+
+use Image::Magick;
+
+use Getopt::Long;
+use Pod::Usage;
+use feature 'say';
+use Data::Dumper;
+
+{
+  package Data::Dumper;
+  no strict "vars";
+
+  $Terse = $Indent = $Useqq = $Deparse = $Sortkeys = 1;
+  $Quotekeys = 0;
+}
+
+my $opt = {
+  pattern   => '.+',
+  size      => 0,
+  hd        => 0,
+  exec      => undef,
+  eval      => 0,
+  copy      => 0,
+  move      => 0,
+  why       => 0,
+  recursive => 0,
+};
+
+GetOptions(
+  'pattern:s' => \$opt->{pattern},
+  'size:s'    => \$opt->{size},
+  'exec:s'    => \$opt->{exec},
+  'eval:s'    => \$opt->{eval},
+  'copy:s'    => \$opt->{copy},
+  'move:s'    => \$opt->{move},
+  'hd'        => \$opt->{hd},
+  'why'       => \$opt->{why},
+  'r|R'       => \$opt->{recursive},
+
+  'h|help'    => \&usage,
+  'man'       => sub { pod2usage(verbose => 3, exitval => 0) },
+  'version'   => sub { printf("%s v%s\n", $APP, $VERSION); exit },
+);
+
+
+
+usage() if ! @ARGV;
+
+$opt->{size} = $opt->{hd} ? '1920x1080' : $opt->{size};
+
+my @result;
+my $result = { };
+for my $file(@ARGV) {
+  if($file =~ m/$opt->{pattern}/i) {
+    # if no user defined pattern is supplied, default pattern matches
+    if($opt->{size}) {
+      my $m = Image::Magick->new;
+      $m->Read($file);
+      my ($x, $y) = $m->Get(qw(width height));
+      if($opt->{size} eq "${x}x$y") {
+        push(@{ $result->{size} }, $file);
+        push(@result, $file);
+        next;
+      }
+    }
+    else {
+      push(@{ $result->{pattern} }, $file);
+      push(@result, $file);
+    }
+  }
+}
+
+if($opt->{why}) {
+  print Dumper $result;
+}
+
+if($opt->{copy}) {
+  require File::Copy;
+  for(@result) {
+    if(File::Copy::copy($_, $opt->{copy})) {
+      printf("'%s' => '%s'\n", $_, $opt->{copy});
+    }
+    else {
+      warn "E: $@\n";
+    }
+  }
+  File::Copy::copy($_, $opt->{copy}) for @result;
+  exit;
+}
+elsif($opt->{exec}) {
+  system($opt->{exec}, @result);
+}
+elsif($opt->{eval}) {
+  local @_ = @result;
+  my @eval_result = eval(
+    'sub p(@) { print @_, "\n"; () }; map { ' . "$opt->{eval}" . '} @_'
+  );
+  if(@eval_result) {
+    say for @eval_result;
+  }
+  print $@, "\n" if $@;
+}
+else {
+  print "$_\n" for @result;
+}
+
+sub usage {
+  pod2usage(
+    verbose => 1,
+    exitval => 0,
+  );
+}
+
+
+__END__
+
+=pod
+
+=head1 NAME
+
+epic
+
+=head1 USAGE
+
+  epic [OPTION]... [FILE]...
+
+=head1 DESCRIPTION
+
+    > type epic
+    epic is epic
+
+=head1 OPTIONS
+
+=head2 CONDITIONALS
+
+  -p, --pattern  must match pattern PATTERN
+  -s, --size     image dimensions must equal SIZE
+  -hd            short for -s 1920x1080
+
+=head2 ACTIONS
+
+  -c,  --copy    copy FILEs to destination
+  -m,  --move    move FILEs to destination
+  -ex, --exec    exec COMMAND, with FILEs as its arguments
+  -ev, --eval    perl code, inserted in a map expr: C<map { HERE } @_>
+
+=head2 OTHER STUFF
+
+  -w,  --why     why did the files end up here?
+
+  -h,  --help    show the help and exit
+  -v,  --version display version info and exit
+  -m,  --man     rtfm :)
+
+=head1 EXAMPLES
+
+Print a list of HD images:
+
+  epic -hd *
+
+Print mtime and filename for each file matching pattern
+
+  epic -p pattern -eval 'p scalar localtime +(stat($_))[9], " ", $_' *
+
+Copy FILEs matching foobar OR fuubar, with a resolution of 1680x1050, to /tmp
+
+  epic -p 'f[ou]{2}bar' -s 1680x1050 -copy  /tmp/ *
+
+L<stat(1)> HD images matching pattern:
+
+  epic -p pattern -exec stat
+
+=head1 AUTHOR
+
+  Magnus Woldrich
+  CPAN ID: WOLDRICH
+  m@japh.se
+  http://japh.se
+
+=head1 REPORTING BUGS
+
+Report bugs and/or feature requests on rt.cpan.org, the repository issue tracker
+or directly to L<m@japh.se>
+
+=head1 CONTRIBUTORS
+
+None required yet.
+
+=head1 COPYRIGHT
+
+Copyright 2011 B<epic>s L</AUTHOR> and L</CONTRIBUTORS> as listed above.
+
+=head1 LICENSE
+
+This program is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+=head1 SEE ALSO
+
+L<stuff|http://github.com/trapd00r>
+
+=cut
