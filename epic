@@ -4,7 +4,7 @@ use warnings FATAL => 'all';
 use vars qw($VERSION);
 
 my $APP  = 'epic';
-$VERSION = '0.012';
+$VERSION = '0.014';
 
 use Image::Magick;
 
@@ -38,8 +38,8 @@ GetOptions(
   'size:s'    => \$opt->{size},
   'exec:s'    => \$opt->{exec},
   'eval:s'    => \$opt->{eval},
-  'copy:s'    => \$opt->{copy},
-  'move:s'    => \$opt->{move},
+  'cp|copy:s' => \$opt->{copy},
+  'mv|move:s' => \$opt->{move},
   'hd'        => \$opt->{hd},
   'why'       => \$opt->{why},
   'r|R'       => \$opt->{recursive},
