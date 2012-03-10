@@ -4,18 +4,19 @@ use warnings FATAL => 'all';
 use vars qw($VERSION);
 
 my $APP  = 'epic';
-$VERSION = '0.014';
+$VERSION = '0.14.1';
 
 use Image::Magick;
 
 use Getopt::Long;
 use Pod::Usage;
 use feature 'say';
-use Data::Dumper;
 
 {
+  no warnings 'once';
   package Data::Dumper;
   no strict "vars";
+
 
   $Terse = $Indent = $Useqq = $Deparse = $Sortkeys = 1;
   $Quotekeys = 0;
@@ -63,7 +64,8 @@ for my $file(@ARGV) {
     if($opt->{size}) {
       my $m = Image::Magick->new;
       $m->Read($file);
-      my ($x, $y) = $m->Get(qw(width height));
+      my($x, $y) = (0, 0);
+      ($x, $y) = $m->Get(qw(width height));
       if($opt->{size} eq "${x}x$y") {
         push(@{ $result->{size} }, $file);
         push(@result, $file);
